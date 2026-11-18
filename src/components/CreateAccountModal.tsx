@@ -52,6 +52,12 @@ export const CreateAccountModal: React.FC<CreateAccountModalProps> = ({
     }
   }, [firebaseUser, ownerName, email, avatarUrl]);
 
+  useEffect(() => {
+    if (authError) {
+      setError(null);
+    }
+  }, [authError]);
+
   const previewAvatar =
     avatarUrl || buildInitialAvatarSvg(channelName || ownerName || 'Y');
 
@@ -116,7 +122,7 @@ export const CreateAccountModal: React.FC<CreateAccountModalProps> = ({
       if (created) {
         onCreated?.();
         onClose();
-      } else {
+      } else if (!authError) {
         setError('Please complete Google Sign-In to create your channel.');
       }
     } finally {
@@ -252,8 +258,10 @@ export const CreateAccountModal: React.FC<CreateAccountModalProps> = ({
             </div>
           </div>
 
-          {(error || authError) && (
-            <p className="text-xs text-red-500 font-medium">{error || authError}</p>
+          {(authError || error) && (
+            <p className="text-xs text-red-500 font-medium break-words">
+              {authError || error}
+            </p>
           )}
 
           <button

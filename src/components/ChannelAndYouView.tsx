@@ -1066,7 +1066,9 @@ export const ChannelAndYouView: React.FC<{
                     : 'Sign in with your Google account to sync history, likes, channels, and uploads.'}
                 </p>
               </div>
-              {authError && <p className="text-xs text-red-500 font-medium">{authError}</p>}
+              {authError && (
+                <p className="text-xs text-red-500 font-medium break-words">{authError}</p>
+              )}
               <div className="flex flex-col gap-2 pt-1">
                 {!firebaseUser && (
                   <button

@@ -771,6 +771,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setAuthError('Sign-in was cancelled.');
       } else if (code === 'auth/popup-blocked') {
         setAuthError('Popup was blocked by your browser. Please allow popups and try again.');
+      } else if (code === 'auth/unauthorized-domain') {
+        const host = typeof window !== 'undefined' ? window.location.hostname : '';
+        setAuthError(
+          `Domain "${host}" is not authorized for Google Sign-In yet. Add it in Firebase Console → Authentication → Settings → Authorized domains.`
+        );
       } else {
         setAuthError(err instanceof Error ? err.message : 'Google Sign-In failed.');
       }
