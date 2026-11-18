@@ -1,0 +1,238 @@
+{
+  "entities": {
+    "UserPrivate": {
+      "title": "UserPrivate",
+      "description": "Private user account profile, preferences, watch history, and interaction lists.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "email": { "type": "string", "format": "email", "maxLength": 200 },
+        "ownerName": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "channelId": { "type": "string", "maxLength": 128 },
+        "avatarUrl": { "type": "string", "maxLength": 200000 },
+        "likedVideoIds": { "type": "array" },
+        "dislikedVideoIds": { "type": "array" },
+        "watchLaterIds": { "type": "array" },
+        "subscribedChannelIds": { "type": "array" },
+        "watchHistoryIds": { "type": "array" },
+        "watchHistoryTimestamps": { "type": "object" },
+        "searchQueries": { "type": "array" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "uid",
+        "email",
+        "ownerName",
+        "channelId",
+        "avatarUrl",
+        "likedVideoIds",
+        "dislikedVideoIds",
+        "watchLaterIds",
+        "subscribedChannelIds",
+        "watchHistoryIds",
+        "watchHistoryTimestamps",
+        "searchQueries",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Channel": {
+      "title": "Channel",
+      "description": "Public creator channel metadata without any PII.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "ownerUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "name": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "handle": { "type": "string", "minLength": 2, "maxLength": 60 },
+        "description": { "type": "string", "maxLength": 1000 },
+        "avatarUrl": { "type": "string", "maxLength": 200000 },
+        "subscribersCount": { "type": "integer" },
+        "videosCount": { "type": "integer" },
+        "bannerGradient": { "type": "string", "maxLength": 120 },
+        "bannerTitle": { "type": "string", "maxLength": 100 },
+        "bannerSubtitle": { "type": "string", "maxLength": 100 },
+        "isPublic": { "type": "boolean" },
+        "isVerified": { "type": "boolean" },
+        "communityEnabled": { "type": "boolean" },
+        "subscriptionsPrivate": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "id",
+        "ownerUid",
+        "name",
+        "handle",
+        "description",
+        "avatarUrl",
+        "subscribersCount",
+        "videosCount",
+        "bannerGradient",
+        "bannerTitle",
+        "bannerSubtitle",
+        "isPublic",
+        "isVerified",
+        "communityEnabled",
+        "subscriptionsPrivate",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Video": {
+      "title": "Video",
+      "description": "Published video, short, music, or live stream entry.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "ownerUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "type": { "type": "string", "enum": ["video", "short", "music", "live"] },
+        "title": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "channelId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "channelName": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "channelHandle": { "type": "string", "minLength": 2, "maxLength": 60 },
+        "channelAvatar": { "type": "string", "maxLength": 200000 },
+        "thumbnailUrl": { "type": "string", "maxLength": 250000 },
+        "accentGradient": { "type": "string", "maxLength": 120 },
+        "duration": { "type": "string", "maxLength": 20 },
+        "viewsCount": { "type": "integer" },
+        "viewsLabel": { "type": "string", "maxLength": 30 },
+        "likesCount": { "type": "integer" },
+        "dislikesCount": { "type": "integer" },
+        "publishedAgo": { "type": "string", "maxLength": 40 },
+        "category": { "type": "string", "maxLength": 50 },
+        "description": { "type": "string", "maxLength": 2000 },
+        "tags": { "type": "array" },
+        "visibility": { "type": "string", "enum": ["Public", "Unlisted", "Private"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "id",
+        "ownerUid",
+        "type",
+        "title",
+        "channelId",
+        "channelName",
+        "channelHandle",
+        "channelAvatar",
+        "thumbnailUrl",
+        "accentGradient",
+        "duration",
+        "viewsCount",
+        "viewsLabel",
+        "likesCount",
+        "dislikesCount",
+        "publishedAgo",
+        "category",
+        "description",
+        "tags",
+        "visibility",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Comment": {
+      "title": "Comment",
+      "description": "Viewer comment stored under a parent video.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "videoId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "authorUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "author": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "handle": { "type": "string", "minLength": 2, "maxLength": 60 },
+        "authorAvatar": { "type": "string", "maxLength": 200000 },
+        "text": { "type": "string", "minLength": 1, "maxLength": 1000 },
+        "likes": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "id",
+        "videoId",
+        "authorUid",
+        "author",
+        "handle",
+        "authorAvatar",
+        "text",
+        "likes",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "CommunityPost": {
+      "title": "CommunityPost",
+      "description": "Creator community text, poll, or quiz post.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "ownerUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "channelId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "channelName": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "channelAvatar": { "type": "string", "maxLength": 200000 },
+        "status": { "type": "string", "enum": ["Published", "Scheduled", "Archived"] },
+        "text": { "type": "string", "minLength": 1, "maxLength": 1500 },
+        "likesCount": { "type": "integer" },
+        "commentsCount": { "type": "integer" },
+        "pollOptions": { "type": "array" },
+        "quizOptions": { "type": "array" },
+        "quizExplanation": { "type": "string", "maxLength": 500 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "id",
+        "ownerUid",
+        "channelId",
+        "channelName",
+        "channelAvatar",
+        "status",
+        "text",
+        "likesCount",
+        "commentsCount",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "AppBrandConfig": {
+      "title": "AppBrandConfig",
+      "description": "Platform-wide brand name and logo controlled by administrators.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "logoUrl": { "type": "string", "maxLength": 200000 },
+        "updatedByUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "logoUrl", "updatedByUid", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserPrivate" },
+      "description": "Private user account data, PII, watch history, and personal video interaction lists."
+    },
+    "/channels/{channelId}": {
+      "schema": { "$ref": "#/entities/Channel" },
+      "description": "Public creator channels."
+    },
+    "/videos/{videoId}": {
+      "schema": { "$ref": "#/entities/Video" },
+      "description": "Public, unlisted, and private videos, shorts, music, and live streams."
+    },
+    "/videos/{videoId}/comments/{commentId}": {
+      "schema": { "$ref": "#/entities/Comment" },
+      "description": "Comments belonging to a specific video."
+    },
+    "/posts/{postId}": {
+      "schema": { "$ref": "#/entities/CommunityPost" },
+      "description": "Creator community posts, polls, and quizzes."
+    },
+    "/appConfig/{configId}": {
+      "schema": { "$ref": "#/entities/AppBrandConfig" },
+      "description": "Application branding settings managed by administrators."
+    }
+  }
+}

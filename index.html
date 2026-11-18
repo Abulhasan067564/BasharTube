@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <script>
+      (function () {
+        try {
+          var currentFetch = window.fetch ? window.fetch.bind(window) : undefined;
+          var makeWritable = function (target) {
+            if (!target) return;
+            try {
+              var desc = Object.getOwnPropertyDescriptor(target, 'fetch');
+              if (desc && desc.configurable) {
+                if (!desc.writable && !desc.set) {
+                  Object.defineProperty(target, 'fetch', {
+                    get: function () {
+                      return currentFetch;
+                    },
+                    set: function (next) {
+                      currentFetch = next;
+                    },
+                    configurable: true,
+                    enumerable: true
+                  });
+                }
+              } else if (!desc) {
+                Object.defineProperty(target, 'fetch', {
+                  value: currentFetch,
+                  writable: true,
+                  configurable: true,
+                  enumerable: true
+                });
+              }
+            } catch (err) {}
+          };
+          makeWritable(typeof Window !== 'undefined' ? Window.prototype : null);
+          makeWritable(window);
+          if (typeof globalThis !== 'undefined' && globalThis !== window) {
+            makeWritable(globalThis);
+          }
+        } catch (e) {}
+
+        window.addEventListener(
+          'error',
+          function (event) {
+            if (
+              event &&
+              typeof event.filename === 'string' &&
+              event.filename.indexOf('chrome-extension://') === 0
+            ) {
+              event.preventDefault();
+              event.stopImmediatePropagation();
+            }
+          },
+          true
+        );
+      })();
+    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>BasharTube</title>
+    <meta name="description" content="Mobile-first video streaming, Shorts, creator analytics, and password-protected admin platform." />
+    <meta property="og:title" content="BasharTube" />
+    <meta property="og:description" content="Mobile-first video streaming, Shorts, creator analytics, and password-protected admin platform." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+

@@ -1,0 +1,462 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global Safety Net: Default deny all reads and writes
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Global Helpers ---
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function isAdmin() {
+      return isVerifiedUser() && (
+        request.auth.token.email == 'abulhasanmohim@gmail.com' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isStringBounded(val, minLen, maxLen) {
+      return val is string && val.size() >= minLen && val.size() <= maxLen;
+    }
+
+    function isStringListBounded(val, maxItems) {
+      return val is list && val.size() <= maxItems && (val.size() == 0 || val[0] is string);
+    }
+
+    // --- Validation Blueprints ---
+    function isValidUser(data) {
+      return data.keys().hasAll([
+          'uid', 'email', 'ownerName', 'channelId', 'avatarUrl',
+          'likedVideoIds', 'dislikedVideoIds', 'watchLaterIds',
+          'subscribedChannelIds', 'watchHistoryIds', 'watchHistoryTimestamps',
+          'searchQueries', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'uid', 'email', 'ownerName', 'channelId', 'avatarUrl',
+          'likedVideoIds', 'dislikedVideoIds', 'watchLaterIds',
+          'subscribedChannelIds', 'watchHistoryIds', 'watchHistoryTimestamps',
+          'searchQueries', 'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.uid)
+        && isStringBounded(data.email, 3, 200)
+        && isStringBounded(data.ownerName, 1, 100)
+        && (data.channelId == '' || isValidId(data.channelId))
+        && isStringBounded(data.avatarUrl, 0, 200000)
+        && isStringListBounded(data.likedVideoIds, 200)
+        && isStringListBounded(data.dislikedVideoIds, 200)
+        && isStringListBounded(data.watchLaterIds, 200)
+        && isStringListBounded(data.subscribedChannelIds, 200)
+        && isStringListBounded(data.watchHistoryIds, 40)
+        && data.watchHistoryTimestamps is map
+        && data.watchHistoryTimestamps.size() <= 40
+        && isStringListBounded(data.searchQueries, 15)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidChannel(data) {
+      return data.keys().hasAll([
+          'id', 'ownerUid', 'name', 'handle', 'description', 'avatarUrl',
+          'subscribersCount', 'videosCount', 'bannerGradient', 'bannerTitle',
+          'bannerSubtitle', 'isPublic', 'isVerified', 'communityEnabled',
+          'subscriptionsPrivate', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'ownerUid', 'name', 'handle', 'description', 'avatarUrl',
+          'subscribersCount', 'videosCount', 'bannerGradient', 'bannerTitle',
+          'bannerSubtitle', 'isPublic', 'isVerified', 'communityEnabled',
+          'subscriptionsPrivate', 'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.id)
+        && isValidId(data.ownerUid)
+        && isStringBounded(data.name, 1, 100)
+        && isStringBounded(data.handle, 2, 60)
+        && isStringBounded(data.description, 0, 1000)
+        && isStringBounded(data.avatarUrl, 0, 200000)
+        && data.subscribersCount is int && data.subscribersCount >= 0 && data.subscribersCount <= 1000000000
+        && data.videosCount is int && data.videosCount >= 0 && data.videosCount <= 1000000
+        && isStringBounded(data.bannerGradient, 0, 120)
+        && isStringBounded(data.bannerTitle, 0, 100)
+        && isStringBounded(data.bannerSubtitle, 0, 100)
+        && data.isPublic is bool
+        && data.isVerified is bool
+        && data.communityEnabled is bool
+        && data.subscriptionsPrivate is bool
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidVideo(data) {
+      return data.keys().hasAll([
+          'id', 'ownerUid', 'type', 'title', 'channelId', 'channelName',
+          'channelHandle', 'channelAvatar', 'thumbnailUrl', 'accentGradient',
+          'duration', 'viewsCount', 'viewsLabel', 'likesCount', 'dislikesCount',
+          'publishedAgo', 'category', 'description', 'tags', 'visibility',
+          'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'ownerUid', 'type', 'title', 'channelId', 'channelName',
+          'channelHandle', 'channelAvatar', 'thumbnailUrl', 'accentGradient',
+          'duration', 'viewsCount', 'viewsLabel', 'likesCount', 'dislikesCount',
+          'publishedAgo', 'category', 'description', 'tags', 'visibility',
+          'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.id)
+        && isValidId(data.ownerUid)
+        && data.type in ['video', 'short', 'music', 'live']
+        && isStringBounded(data.title, 1, 160)
+        && isValidId(data.channelId)
+        && isStringBounded(data.channelName, 1, 100)
+        && isStringBounded(data.channelHandle, 2, 60)
+        && isStringBounded(data.channelAvatar, 0, 200000)
+        && isStringBounded(data.thumbnailUrl, 0, 250000)
+        && isStringBounded(data.accentGradient, 0, 120)
+        && isStringBounded(data.duration, 1, 20)
+        && data.viewsCount is int && data.viewsCount >= 0 && data.viewsCount <= 1000000000
+        && isStringBounded(data.viewsLabel, 1, 30)
+        && data.likesCount is int && data.likesCount >= 0 && data.likesCount <= 1000000000
+        && data.dislikesCount is int && data.dislikesCount >= 0 && data.dislikesCount <= 1000000000
+        && isStringBounded(data.publishedAgo, 1, 40)
+        && isStringBounded(data.category, 1, 50)
+        && isStringBounded(data.description, 0, 2000)
+        && isStringListBounded(data.tags, 10)
+        && data.visibility in ['Public', 'Unlisted', 'Private']
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidComment(data) {
+      return data.keys().hasAll([
+          'id', 'videoId', 'authorUid', 'author', 'handle',
+          'authorAvatar', 'text', 'likes', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'videoId', 'authorUid', 'author', 'handle',
+          'authorAvatar', 'text', 'likes', 'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.id)
+        && isValidId(data.videoId)
+        && isValidId(data.authorUid)
+        && isStringBounded(data.author, 1, 100)
+        && isStringBounded(data.handle, 2, 60)
+        && isStringBounded(data.authorAvatar, 0, 200000)
+        && isStringBounded(data.text, 1, 1000)
+        && data.likes is int && data.likes >= 0 && data.likes <= 1000000000
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidPost(data) {
+      return data.keys().hasAll([
+          'id', 'ownerUid', 'channelId', 'channelName', 'channelAvatar',
+          'status', 'text', 'likesCount', 'commentsCount', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'ownerUid', 'channelId', 'channelName', 'channelAvatar',
+          'status', 'text', 'likesCount', 'commentsCount', 'pollOptions',
+          'quizOptions', 'quizExplanation', 'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.id)
+        && isValidId(data.ownerUid)
+        && isValidId(data.channelId)
+        && isStringBounded(data.channelName, 1, 100)
+        && isStringBounded(data.channelAvatar, 0, 200000)
+        && data.status in ['Published', 'Scheduled', 'Archived']
+        && isStringBounded(data.text, 1, 1500)
+        && data.likesCount is int && data.likesCount >= 0 && data.likesCount <= 1000000000
+        && data.commentsCount is int && data.commentsCount >= 0 && data.commentsCount <= 1000000000
+        && (!('pollOptions' in data) || (data.pollOptions is list && data.pollOptions.size() <= 6 && (data.pollOptions.size() == 0 || data.pollOptions[0] is map)))
+        && (!('quizOptions' in data) || (data.quizOptions is list && data.quizOptions.size() <= 6 && (data.quizOptions.size() == 0 || data.quizOptions[0] is map)))
+        && (!('quizExplanation' in data) || isStringBounded(data.quizExplanation, 0, 500))
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidAppBrand(data) {
+      return data.keys().hasAll(['name', 'logoUrl', 'updatedByUid', 'updatedAt'])
+        && data.keys().hasOnly(['name', 'logoUrl', 'updatedByUid', 'updatedAt'])
+        && isStringBounded(data.name, 1, 80)
+        && isStringBounded(data.logoUrl, 0, 200000)
+        && isValidId(data.updatedByUid)
+        && data.updatedAt is timestamp;
+    }
+
+    // --- Collection Rules ---
+
+    // 1. Admin registry (read-only by owner/admin; managed via console/server)
+    match /admins/{userId} {
+      allow get: if isValidId(userId) && (isOwner(userId) || isAdmin());
+      allow list, create, update, delete: if false;
+    }
+
+    // 2. Private User PII & State
+    match /users/{userId} {
+      allow get: if isValidId(userId) && (isOwner(userId) || isAdmin());
+      allow list: if isAdmin();
+      allow create: if isVerifiedUser()
+        && isValidId(userId)
+        && isValidUser(incoming())
+        && incoming().uid == userId
+        && (isOwner(userId) || isAdmin())
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isVerifiedUser()
+        && isValidId(userId)
+        && isValidUser(incoming())
+        && incoming().uid == existing().uid
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          isAdmin() ||
+          (
+            isOwner(userId) &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'ownerName', 'channelId', 'avatarUrl',
+              'likedVideoIds', 'dislikedVideoIds', 'watchLaterIds',
+              'subscribedChannelIds', 'watchHistoryIds', 'watchHistoryTimestamps',
+              'searchQueries', 'updatedAt'
+            ])
+          )
+        );
+      allow delete: if isValidId(userId) && isAdmin();
+    }
+
+    // 3. Public Creator Channels (No PII)
+    match /channels/{channelId} {
+      allow get: if isValidId(channelId) && (existing().isPublic == true || isOwner(existing().ownerUid) || isAdmin());
+      allow list: if resource.data.isPublic == true || (isSignedIn() && resource.data.ownerUid == request.auth.uid) || isAdmin();
+      allow create: if isVerifiedUser()
+        && isValidId(channelId)
+        && isValidChannel(incoming())
+        && incoming().id == channelId
+        && incoming().isPublic == true
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time
+        && (
+          isAdmin() ||
+          (
+            incoming().ownerUid == request.auth.uid
+            && incoming().isVerified == false
+            && incoming().subscribersCount == 0
+            && incoming().videosCount == 0
+          )
+        );
+      allow update: if isVerifiedUser()
+        && isValidId(channelId)
+        && isValidChannel(incoming())
+        && incoming().id == existing().id
+        && incoming().ownerUid == existing().ownerUid
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          isAdmin() ||
+          (
+            isOwner(existing().ownerUid) &&
+            incoming().isVerified == existing().isVerified &&
+            incoming().subscribersCount == existing().subscribersCount &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'name', 'handle', 'description', 'avatarUrl',
+              'bannerGradient', 'bannerTitle', 'bannerSubtitle',
+              'communityEnabled', 'subscriptionsPrivate', 'videosCount', 'updatedAt'
+            ])
+          ) ||
+          (
+            incoming().diff(existing()).affectedKeys().hasOnly(['subscribersCount', 'updatedAt']) &&
+            (
+              incoming().subscribersCount == existing().subscribersCount + 1 ||
+              incoming().subscribersCount == existing().subscribersCount - 1
+            )
+          )
+        );
+      allow delete: if isVerifiedUser() && isValidId(channelId) && (isOwner(existing().ownerUid) || isAdmin());
+    }
+
+    // 4. Videos & Shorts
+    match /videos/{videoId} {
+      allow get: if isValidId(videoId) && (
+        existing().visibility == 'Public' ||
+        existing().visibility == 'Unlisted' ||
+        isOwner(existing().ownerUid) ||
+        isAdmin()
+      );
+      allow list: if resource.data.visibility == 'Public'
+        || (isSignedIn() && resource.data.ownerUid == request.auth.uid)
+        || isAdmin();
+      allow create: if isVerifiedUser()
+        && isValidId(videoId)
+        && isValidVideo(incoming())
+        && incoming().id == videoId
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time
+        && (
+          isAdmin() ||
+          (
+            incoming().ownerUid == request.auth.uid
+            && incoming().likesCount == 0
+            && incoming().dislikesCount == 0
+            && exists(/databases/$(database)/documents/channels/$(incoming().channelId))
+            && get(/databases/$(database)/documents/channels/$(incoming().channelId)).data.ownerUid == request.auth.uid
+          )
+        );
+      allow update: if isVerifiedUser()
+        && isValidId(videoId)
+        && isValidVideo(incoming())
+        && incoming().id == existing().id
+        && incoming().ownerUid == existing().ownerUid
+        && incoming().channelId == existing().channelId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          isAdmin() ||
+          (
+            isOwner(existing().ownerUid) &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'title', 'description', 'category', 'tags', 'visibility',
+              'thumbnailUrl', 'channelName', 'channelHandle', 'channelAvatar', 'updatedAt'
+            ])
+          ) ||
+          (
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'likesCount', 'dislikesCount', 'viewsCount', 'viewsLabel', 'updatedAt'
+            ]) &&
+            incoming().viewsCount >= existing().viewsCount &&
+            incoming().viewsCount <= existing().viewsCount + 1 &&
+            incoming().likesCount >= existing().likesCount - 1 &&
+            incoming().likesCount <= existing().likesCount + 1 &&
+            incoming().dislikesCount >= existing().dislikesCount - 1 &&
+            incoming().dislikesCount <= existing().dislikesCount + 1
+          )
+        );
+      allow delete: if isVerifiedUser() && isValidId(videoId) && (isOwner(existing().ownerUid) || isAdmin());
+
+      // 5. Video Comments Subcollection (Master Gate)
+      match /comments/{commentId} {
+        allow get: if isValidId(videoId) && isValidId(commentId) && exists(/databases/$(database)/documents/videos/$(videoId));
+        allow list: if resource.data.videoId == videoId && resource.data.authorUid is string;
+        allow create: if isVerifiedUser()
+          && isValidId(videoId)
+          && isValidId(commentId)
+          && isValidComment(incoming())
+          && incoming().id == commentId
+          && incoming().videoId == videoId
+          && incoming().authorUid == request.auth.uid
+          && incoming().likes == 0
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time
+          && exists(/databases/$(database)/documents/videos/$(videoId));
+        allow update: if isVerifiedUser()
+          && isValidId(videoId)
+          && isValidId(commentId)
+          && isValidComment(incoming())
+          && incoming().id == existing().id
+          && incoming().videoId == existing().videoId
+          && incoming().authorUid == existing().authorUid
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && exists(/databases/$(database)/documents/videos/$(videoId))
+          && (
+            isAdmin() ||
+            (
+              isOwner(existing().authorUid) &&
+              incoming().diff(existing()).affectedKeys().hasOnly(['text', 'author', 'handle', 'authorAvatar', 'updatedAt'])
+            ) ||
+            (
+              incoming().diff(existing()).affectedKeys().hasOnly(['likes', 'updatedAt']) &&
+              (incoming().likes == existing().likes + 1 || incoming().likes == existing().likes - 1)
+            )
+          );
+        allow delete: if isVerifiedUser()
+          && isValidId(videoId)
+          && isValidId(commentId)
+          && (
+            isAdmin() ||
+            isOwner(existing().authorUid) ||
+            get(/databases/$(database)/documents/videos/$(videoId)).data.ownerUid == request.auth.uid
+          );
+      }
+    }
+
+    // 6. Community Posts
+    match /posts/{postId} {
+      allow get: if isValidId(postId) && (existing().status == 'Published' || isOwner(existing().ownerUid) || isAdmin());
+      allow list: if resource.data.status == 'Published'
+        || (isSignedIn() && resource.data.ownerUid == request.auth.uid)
+        || isAdmin();
+      allow create: if isVerifiedUser()
+        && isValidId(postId)
+        && isValidPost(incoming())
+        && incoming().id == postId
+        && incoming().ownerUid == request.auth.uid
+        && incoming().likesCount == 0
+        && incoming().commentsCount == 0
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time
+        && exists(/databases/$(database)/documents/channels/$(incoming().channelId))
+        && get(/databases/$(database)/documents/channels/$(incoming().channelId)).data.ownerUid == request.auth.uid;
+      allow update: if isVerifiedUser()
+        && isValidId(postId)
+        && isValidPost(incoming())
+        && incoming().id == existing().id
+        && incoming().ownerUid == existing().ownerUid
+        && incoming().channelId == existing().channelId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          isAdmin() ||
+          (
+            isOwner(existing().ownerUid) &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['status', 'text', 'updatedAt'])
+          ) ||
+          (
+            incoming().diff(existing()).affectedKeys().hasOnly(['likesCount', 'updatedAt']) &&
+            (incoming().likesCount == existing().likesCount + 1 || incoming().likesCount == existing().likesCount - 1)
+          ) ||
+          (
+            incoming().diff(existing()).affectedKeys().hasOnly(['pollOptions', 'updatedAt']) &&
+            existing().pollOptions is list &&
+            incoming().pollOptions is list &&
+            incoming().pollOptions.size() == existing().pollOptions.size()
+          )
+        );
+      allow delete: if isVerifiedUser() && isValidId(postId) && (isOwner(existing().ownerUid) || isAdmin());
+    }
+
+    // 7. Global App Branding Config
+    match /appConfig/{configId} {
+      allow get: if isValidId(configId) && configId == 'brand';
+      allow list: if false;
+      allow create, update: if isVerifiedUser()
+        && isValidId(configId)
+        && configId == 'brand'
+        && isAdmin()
+        && isValidAppBrand(incoming())
+        && incoming().updatedByUid == request.auth.uid
+        && incoming().updatedAt == request.time;
+      allow delete: if false;
+    }
+  }
+}
